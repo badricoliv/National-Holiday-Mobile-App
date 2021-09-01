@@ -5,46 +5,22 @@ import { db } from './firebase'
 import { NavigationContainer } from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-
-class holiday {
-  day;
-  month;
-  name;
-  constructor(day: number, month: number, name: string) {
-    this.day = day;
-    this.month = month;
-    this.name = name;
-  }
-}
-
+  /**
+   * Page that displays what national holiday it is today. Filters data from firestore by day and month
+   * numeric values, then adds them to a string.
+   */
 function whatDayIsToday() {
   var date = new Date().toDateString();
   var month = new Date().getMonth();
   var day = new Date().getDate();
-  const coll = db.firestore().collection('Holidays')
-  const ref = db.firestore().collection('Holidays').where("day", "==", day);
-  const ref2 = ref.where("month", "==", month);
+  const dayFiltered = db.firestore().collection('Holidays').where("day", "==", day);
+  const monthFiltered = dayFiltered.where("month", "==", month);
   const [data, setData] = useState("");
   var strings: string[] = [];
-  /* Code to add data to firestore */
-  //   const days = [
-  //   new holiday(6,8, "Labour Day"),
-  //   new holiday(6,8, "National Read a Book Day"),
-  //   new holiday(6,8, "Fight Procrastination Day"),
-  //   new holiday(6,8, "National Coffee Ice Cream Day"),
-  //   new holiday(6,8, "Rosh Hashanah"),
-  //   new holiday(6,8, "West Indian Day Parade"),
-  // ]
-  // for(var i = 0; i < days.length; i++) {
-  //   const user = coll.doc(days[i].name).set({
-  //     day: days[i].day,
-  //     month: days[i].month,
-  //   })
-  // }
 
   useEffect(() => {
     async function getDataFromFireStore() {
-      ref.onSnapshot((query) => {
+      monthFiltered.onSnapshot((query) => {
         const objs: string[] = [];
         query.forEach((doc) => {
           objs.push(doc.id);
@@ -72,25 +48,16 @@ function whatDayIsToday() {
   );
 }
 
-const NewSetStack = createNativeStackNavigator();
+/**
+ * Page that allows the user to search for a specific date, and tells them what holidays are on that
+ * day.
+ */
 function screen2() {
     const [holidays, setHolidays] = useState([])
     const [filter, setFilter] = useState([])
     const [day, setDay] = useState(0);
     const [month, setMonth] = useState(0)
 
-      const getHolidays = () => {
-        const unsubscribe = db.firestore().collection("Holidays").onSnapshot((snapshot) => {
-          const newHolidays = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
-    
-          setHolidays(newHolidays);
-        })
-        return () => unsubscribe();
-      }
-      getHolidays();
   return (
     <View style={styles.container}>
       <View style={styles.dateInput}>
@@ -127,10 +94,11 @@ function screen2() {
       <Text>{filter}</Text>
     </View>
   )
-
-
-
 }
+
+/**
+ * React navigator
+ */
 const Tab = createBottomTabNavigator();
 export default function App() {
   return (
