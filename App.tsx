@@ -1,18 +1,49 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useState, useEffect } from 'react';
-import { Button, StyleSheet, Text, View, TextInput, Keyboard, ScrollView, Pressable } from 'react-native';
+import {StyleSheet, Text, View, TextInput, Keyboard, ScrollView, Pressable } from 'react-native';
 import { db } from './firebase'
 import { NavigationContainer } from '@react-navigation/native';
-import {createNativeStackNavigator} from '@react-navigation/native-stack'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-  /**
-   * Page that displays what national holiday it is today. Filters data from firestore by day and month
-   * numeric values, then adds them to a string.
-   */
+import {useFonts} from 'expo-font'
+import * as Font from 'expo-font'
+/**
+ * Page that displays what national holiday it is today. Filters data from firestore by day and month
+ * numeric values, then adds them to a string.
+ */
 function whatDayIsToday() {
-  var date = new Date().toDateString();
-  var month = new Date().getMonth();
-  var day = new Date().getDate();
+
+  /* Makes it so the date is being updated in real time. */
+  const [date,setDate] = useState(new Date());
+
+  const [fontLoaded, setFontLoaded] = useState(false);
+  const [font, setFont] = useState('Arial');
+
+  useEffect(() => {
+    var timer = setInterval(() => setDate(new Date()), 1000)
+    return function cleanup() {
+      clearInterval(timer)
+    }
+  })
+  async function loadFonts() {
+    await Font.loadAsync({
+      HandleeRegular: require('./fonts/Handlee-Regular.ttf'),
+      'Handlee': {
+        uri: require('./fonts/Handlee-Regular.ttf'),
+        display: Font.FontDisplay.FALLBACK,
+      },
+    })
+    setFontLoaded(true);
+    setFont('HandleeRegular')
+  }
+  loadFonts();
+
+  const [loaded] = useFonts({
+    HandleeRegular: require('./fonts/Handlee-Regular.ttf')
+  })
+  var year = date.getFullYear();
+  var month = date.getMonth();
+  var day = date.getDate();
+
   const dayFiltered = db.firestore().collection('Holidays').where("day", "==", day);
   const monthFiltered = dayFiltered.where("month", "==", month);
   const [data, setData] = useState("");
@@ -36,15 +67,15 @@ function whatDayIsToday() {
 
     getDataFromFireStore();
   }, []);
-
-  var month = new Date().getMonth();
-  var day = new Date().getDate();
   return (
     <View style={styles.container}>
-      <Text>Today, {date}, is:</Text>
+      <Text style={[styles.title, {fontFamily: font}]}>Today,</Text>
+      <Text style={[styles.title, {fontFamily: font}]}>{day}/{month+1}/{year}</Text>
+      <Text style={[styles.title, {fontFamily: font}]}>is...</Text>
       <Text>{data}</Text>
       <StatusBar style="auto" />
     </View>
+
   );
 }
 
@@ -53,17 +84,41 @@ function whatDayIsToday() {
  * day.
  */
 function screen2() {
-    const [holidays, setHolidays] = useState([])
-    const [filter, setFilter] = useState([])
-    const [day, setDay] = useState(0);
-    const [month, setMonth] = useState(0)
+  const [filter, setFilter] = useState("")
+  const [day, setDay] = useState(6);
+  const [month, setMonth] = useState(8)
+  const [data,setData] = useState("");
+  const days= db.firestore().collection('Holidays')
+  const [hol, setHol] = useState([{}])
+  const [filtered, setFiltered] = useState([{}]);
+  useEffect(() => {
+    const holidays: string[] = [];
+    const dayNo: string[] = [];
+    const monthNo: string[] = [];
+    days.get().then((querySnapshot) => {
+      if(querySnapshot.empty) {
+        console.log('EMPTY');
 
+      } else {
+        querySnapshot.forEach((doc) => {
+          holidays.push(doc.id);
+          dayNo.push(doc.data().day)
+          monthNo.push(doc.data().month)
+        })
+        for(var i = 0; i < holidays.length; i++) {
+          setHol(oldArray => [...oldArray, {id:holidays[i],day:dayNo[i],month: monthNo[i]}])
+        }
+        
+      }
+    })
+  }, []);
+  
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.dateInput}>
         <TextInput
           style={styles.input}
-          onChangeText={setDay}
+          onChangeText={e => setDay(e)}
           onSubmitEditing={Keyboard.dismiss}
           keyboardType={'number-pad'}
           returnKeyType={'done'}
@@ -72,7 +127,7 @@ function screen2() {
           multiline={false} />
         <TextInput
           style={styles.input}
-          onChangeText={setMonth}
+          onChangeText={e => setMonth(e)}
           onSubmitEditing={Keyboard.dismiss}
           keyboardType={'number-pad'}
           returnKeyType={'done'}
@@ -82,17 +137,20 @@ function screen2() {
       </View>
       <Pressable
         onPress={() => {
-          const filteredDays = holidays.filter((e) => e.day == day);
-          const filteredMonths = filteredDays.filter((e) => e.month == month);
-          setFilter(filteredMonths)
+          setFiltered(hol.filter(x => (x.day == day && x.month == month-1)))
         }}
         style={[styles.button, { left: 0 }, { backgroundColor: '#0000FF' }]}
         disabled={!((day > 0 && day <= 31) && (month > 0 && month <= 12))}
       >
-        <Text>SUBMIT</Text>
+        <Text>SEARCH</Text>
       </Pressable>
-      <Text>{filter}</Text>
-    </View>
+      {filtered.map((x) => {
+        return (
+          <Text>{x.id}</Text>
+        )
+      })}
+      
+    </ScrollView>
   )
 }
 
@@ -102,12 +160,13 @@ function screen2() {
 const Tab = createBottomTabNavigator();
 export default function App() {
   return (
-    <NavigationContainer>
-      <Tab.Navigator>
-        <Tab.Screen name="Home" component={whatDayIsToday} />
-        <Tab.Screen name="Search" component={screen2} />
-      </Tab.Navigator>
-    </NavigationContainer>
+      <NavigationContainer>
+        <Tab.Navigator>
+          <Tab.Screen name="Home" component={whatDayIsToday} />
+          <Tab.Screen name="Search" component={screen2} />
+        </Tab.Navigator>
+      </NavigationContainer>
+
   )
 }
 
@@ -115,12 +174,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     flexDirection: "column",
-    alignItems:'center'
-    
+    alignItems: 'center'
+
   },
   dateInput: {
-    flex: 1,
-    backgroundColor: '#fff',
     justifyContent: 'center',
     flexDirection: 'row',
   },
@@ -137,5 +194,10 @@ const styles = StyleSheet.create({
     height: 40,
     width: 150,
     borderWidth: 1,
+  },
+  title: {
+    fontSize: 30,
+    alignItems:'center',
+    justifyContent: 'center',
   }
 });
