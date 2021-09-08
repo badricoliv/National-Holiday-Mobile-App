@@ -72,7 +72,7 @@ function whatDayIsToday() {
       <Text style={[styles.title, {fontFamily: font}]}>Today,</Text>
       <Text style={[styles.title, {fontFamily: font}]}>{day}/{month+1}/{year}</Text>
       <Text style={[styles.title, {fontFamily: font}]}>is...</Text>
-      <Text>{data}</Text>
+      <Text style={styles.resultText}>{data}</Text>
       <StatusBar style="auto" />
     </View>
 
@@ -139,16 +139,19 @@ function screen2() {
         onPress={() => {
           setFiltered(hol.filter(x => (x.day == day && x.month == month-1)))
         }}
-        style={[styles.button, { left: 0 }, { backgroundColor: '#0000FF' }]}
+        style={[styles.button, { left: 0 }, { backgroundColor: '#00FFFF' }]}
         disabled={!((day > 0 && day <= 31) && (month > 0 && month <= 12))}
       >
         <Text>SEARCH</Text>
       </Pressable>
+      <View style={styles.results}>
       {filtered.map((x) => {
         return (
-          <Text>{x.id}</Text>
+          <Text key = {x.id} style={styles.resultText}>{x.id}</Text>
         )
       })}
+      </View>
+
       
     </ScrollView>
   )
@@ -180,6 +183,7 @@ const styles = StyleSheet.create({
   dateInput: {
     justifyContent: 'center',
     flexDirection: 'row',
+    marginBottom: 5,
   },
   input: {
     height: 40,
@@ -199,5 +203,15 @@ const styles = StyleSheet.create({
     fontSize: 30,
     alignItems:'center',
     justifyContent: 'center',
+  },
+  results: {
+    marginTop:20,
+    justifyContent:'center',
+    alignItems: 'center',
+  },
+  resultText: {
+    marginBottom:10,
+    fontSize: 20,
+    textAlign: 'center',
   }
 });
