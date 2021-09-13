@@ -1,10 +1,11 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useState, useEffect } from 'react';
-import {StyleSheet, Text, View, TextInput, Keyboard, ScrollView, Pressable } from 'react-native';
+import { StyleSheet, Text, View, TextInput, Keyboard, ScrollView, Pressable } from 'react-native';
 import { db } from './firebase'
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import {useFonts} from 'expo-font'
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
+import { useFonts } from 'expo-font'
 import * as Font from 'expo-font'
 /**
  * Page that displays what national holiday it is today. Filters data from firestore by day and month
@@ -13,7 +14,7 @@ import * as Font from 'expo-font'
 function whatDayIsToday() {
 
   /* Makes it so the date is being updated in real time. */
-  const [date,setDate] = useState(new Date());
+  const [date, setDate] = useState(new Date());
 
   const [fontLoaded, setFontLoaded] = useState(false);
   const [font, setFont] = useState('Arial');
@@ -69,9 +70,9 @@ function whatDayIsToday() {
   }, []);
   return (
     <View style={styles.container}>
-      <Text style={[styles.title, {fontFamily: font}]}>Today,</Text>
-      <Text style={[styles.title, {fontFamily: font}]}>{day}/{month+1}/{year}</Text>
-      <Text style={[styles.title, {fontFamily: font}]}>is...</Text>
+      <Text style={[styles.title, { fontFamily: font }]}>Today,</Text>
+      <Text style={[styles.title, { fontFamily: font }]}>{day}/{month + 1}/{year}</Text>
+      <Text style={[styles.title, { fontFamily: font }]}>is...</Text>
       <Text style={styles.resultText}>{data}</Text>
       <StatusBar style="auto" />
     </View>
@@ -83,20 +84,17 @@ function whatDayIsToday() {
  * Page that allows the user to search for a specific date, and tells them what holidays are on that
  * day.
  */
-function screen2() {
-  const [filter, setFilter] = useState("")
-  const [day, setDay] = useState(6);
-  const [month, setMonth] = useState(8)
-  const [data,setData] = useState("");
-  const days= db.firestore().collection('Holidays')
+function search() {
+  const days = db.firestore().collection('Holidays')
   const [hol, setHol] = useState([{}])
-  const [filtered, setFiltered] = useState([{}]);
+  const [dateFiltered, setDateFiltered] = useState([{}]);
+  const [nameFiltered, setNameFiltered] = useState([{}]);
   useEffect(() => {
     const holidays: string[] = [];
     const dayNo: string[] = [];
     const monthNo: string[] = [];
     days.get().then((querySnapshot) => {
-      if(querySnapshot.empty) {
+      if (querySnapshot.empty) {
         console.log('EMPTY');
 
       } else {
@@ -105,55 +103,102 @@ function screen2() {
           dayNo.push(doc.data().day)
           monthNo.push(doc.data().month)
         })
-        for(var i = 0; i < holidays.length; i++) {
-          setHol(oldArray => [...oldArray, {id:holidays[i],day:dayNo[i],month: monthNo[i]}])
+        for (var i = 0; i < holidays.length; i++) {
+          setHol(oldArray => [...oldArray, { id: holidays[i], day: dayNo[i], month: monthNo[i] }])
         }
-        
+
       }
     })
   }, []);
-  
-  return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.dateInput}>
-        <TextInput
-          style={styles.input}
-          onChangeText={e => setDay(e)}
-          onSubmitEditing={Keyboard.dismiss}
-          keyboardType={'number-pad'}
-          returnKeyType={'done'}
-          blurOnSubmit={true}
-          placeholder="Day"
-          multiline={false} />
-        <TextInput
-          style={styles.input}
-          onChangeText={e => setMonth(e)}
-          onSubmitEditing={Keyboard.dismiss}
-          keyboardType={'number-pad'}
-          returnKeyType={'done'}
-          blurOnSubmit={true}
-          placeholder="Month"
-          multiline={false} />
-      </View>
-      <Pressable
-        onPress={() => {
-          setFiltered(hol.filter(x => (x.day == day && x.month == month-1)))
-        }}
-        style={[styles.button, { left: 0 }, { backgroundColor: '#00FFFF' }]}
-        disabled={!((day > 0 && day <= 31) && (month > 0 && month <= 12))}
-      >
-        <Text>SEARCH</Text>
-      </Pressable>
-      <View style={styles.results}>
-      {filtered.map((x) => {
-        return (
-          <Text key = {x.id} style={styles.resultText}>{x.id}</Text>
-        )
-      })}
-      </View>
+  function byDate() {
+    const [day, setDay] = useState(-1);
+    const [month, setMonth] = useState(-1)
+    return (
+      <ScrollView contentContainerStyle={styles.container}>
+        <View style={styles.dateInput}>
+          <TextInput
+            style={styles.input}
+            onChangeText={e => setDay(e)}
+            onSubmitEditing={Keyboard.dismiss}
+            keyboardType={'number-pad'}
+            returnKeyType={'done'}
+            blurOnSubmit={true}
+            placeholder="Day"
+            multiline={false} />
+          <TextInput
+            style={styles.input}
+            onChangeText={e => setMonth(e)}
+            onSubmitEditing={Keyboard.dismiss}
+            keyboardType={'number-pad'}
+            returnKeyType={'done'}
+            blurOnSubmit={true}
+            placeholder="Month"
+            multiline={false} />
+        </View>
+        <Pressable
+          onPress={() => {
+            setDateFiltered(hol.filter(x => (x.day == day && x.month == month - 1)))
+          }}
+          style={[styles.button, { left: 0 }, { backgroundColor: '#00FFFF' }]}
+          disabled={!((day > 0 && day <= 31) && (month > 0 && month <= 12))}
+        >
+          <Text>SEARCH</Text>
+        </Pressable>
+        <View style={styles.results}>
+          {dateFiltered.map((x) => {
+            return (
+              <Text key={x.id} style={styles.resultText}>{x.id}</Text>
+            )
+          })}
+        </View>
+      </ScrollView>
+    )
+  }
 
-      
-    </ScrollView>
+  function byName() {
+    const [name, setName] = useState("")
+    const months = ["January","February","March","April","May","June","July","August","September","October","November","December"]
+
+
+    return (
+      <ScrollView contentContainerStyle={styles.container}>
+        <View style={styles.dateInput}>
+        <TextInput
+                style={styles.titleInput}
+                onChangeText={setName}
+                onSubmitEditing={Keyboard.dismiss}
+                returnKeyType={'done'}
+                blurOnSubmit={true}
+                placeholder="Title"
+                multiline={false} />
+        </View>
+        <Pressable
+          onPress={() => {
+            setNameFiltered(hol.filter(x => x.id == name))
+            
+          }}
+          style={[styles.button, { left: 0 }, { backgroundColor: '#00FFFF' }]}
+          disabled={name == ""}
+        >
+          <Text>SEARCH</Text>
+        </Pressable>
+        {nameFiltered.map((x) => {
+            return (
+              <Text key={x.id} style={styles.resultText}>{x.id + "\n" + x.day + " " + months[x.month]}</Text>
+            )
+          })}
+          </ScrollView>
+    )
+  }
+
+  const topTab = createMaterialTopTabNavigator();
+  return (
+    <NavigationContainer independent={true}>
+      <topTab.Navigator>
+        <topTab.Screen name="By Date" component={byDate} />
+        <topTab.Screen name="By Name" component={byName} />
+      </topTab.Navigator>
+    </NavigationContainer>
   )
 }
 
@@ -163,12 +208,12 @@ function screen2() {
 const Tab = createBottomTabNavigator();
 export default function App() {
   return (
-      <NavigationContainer>
-        <Tab.Navigator>
-          <Tab.Screen name="Home" component={whatDayIsToday} />
-          <Tab.Screen name="Search" component={screen2} />
-        </Tab.Navigator>
-      </NavigationContainer>
+    <NavigationContainer>
+      <Tab.Navigator>
+        <Tab.Screen name="Home" component={whatDayIsToday} />
+        <Tab.Screen name="Search" component={search} />
+      </Tab.Navigator>
+    </NavigationContainer>
 
   )
 }
@@ -201,17 +246,24 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 30,
-    alignItems:'center',
+    alignItems: 'center',
     justifyContent: 'center',
   },
   results: {
-    marginTop:20,
-    justifyContent:'center',
+    marginTop: 20,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   resultText: {
-    marginBottom:10,
+    marginBottom: 10,
     fontSize: 20,
     textAlign: 'center',
-  }
+  },
+  titleInput: {
+    height: 40,
+    width: 250,
+    margin: 12,
+    borderWidth: 1,
+    padding: 10,
+},
 });
